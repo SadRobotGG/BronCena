@@ -7,8 +7,9 @@
 
 ## X-Category: Miscellaneous, Audio & Video
 ## X-License: MIT License
-## X-Website: https://github.com/SadRobotGG/Auras/tree/main/BronCena
+## X-Website: https://github.com/SadRobotGG/BronCena
 ## X-Curse-Project-ID: 513767
-## X-WoWI-ID:
+## X-WoWI-ID: 26129
+## X-Wago-ID: 0mKO7kKx
 
 BronCena.lua
