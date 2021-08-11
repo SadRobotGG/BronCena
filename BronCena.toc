@@ -1,0 +1,14 @@
+## Interface: 90100
+
+## Title: Bron Cena
+## Notes: Helps Bron Cena announce his arrival in style
+## Author: whup
+## Version: v0.1
+
+## X-Category: Miscellaneous, Audio & Video
+## X-License: MIT License
+## X-Website: https://github.com/SadRobotGG/Auras/tree/main/BronCena
+## X-Curse-Project-ID: 513767
+## X-WoWI-ID:
+
+BronCena.lua
