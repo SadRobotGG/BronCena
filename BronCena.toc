@@ -3,7 +3,7 @@
 ## Title: Bron Cena
 ## Notes: Helps Bron Cena announce his arrival in style
 ## Author: whup
-## Version: v0.1
+## Version: v1.0
 
 ## X-Category: Miscellaneous, Audio & Video
 ## X-License: MIT License
