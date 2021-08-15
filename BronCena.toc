@@ -3,8 +3,9 @@
 ## Title: Bron Cena
 ## Notes: Helps Bron Cena announce his arrival in style
 ## Author: whup
-## Version: v1.0
-
+## Version: @project-version@
+# OptionalDependencies: Ace3, LibSharedMedia-3.0
+## DefaultState: Enabled
 ## X-Category: Miscellaneous, Audio & Video
 ## X-License: MIT License
 ## X-Website: https://github.com/SadRobotGG/BronCena
@@ -12,4 +13,17 @@
 ## X-WoWI-ID: 26129
 ## X-Wago-ID: 0mKO7kKx
 
+#lib\LibStub\LibStub.lua
+#lib\CallbackHandler-1.0\CallbackHandler-1.0.lua
+#@no-lib-strip@
+#lib\AceAddon-3.0\AceAddon-3.0.xml
+#lib\AceConsole-3.0\AceConsole-3.0.xml
+#lib\AceEvent-3.0\AceEvent-3.0.xml
+#lib\AceDB-3.0\AceDB-3.0.xml
+#lib\LibRealmInfo\LibRealmInfo.lua
+#lib\LibDataBroker-1.1\LibDataBroker-1.1.lua
+#Lib\LibDBIcon-1.0\lib.xml
+#@end-no-lib-strip@
+
+#embeds.xml
 BronCena.lua
