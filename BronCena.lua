@@ -4,12 +4,15 @@ local _, ns = ...
 local APPNAME = "BronCena"
 local APPDESC = "Bron Cena"
 
-BronCena = LibStub("AceAddon-3.0"):NewAddon(APPNAME, "AceConsole-3.0", "AceEvent-3.0")
+BronCena = LibStub("AceAddon-3.0"):NewAddon(APPNAME, "AceConsole-3.0", "AceEvent-3.0", "AceTimer-3.0")
 local L = LibStub("AceLocale-3.0"):GetLocale(APPNAME)
 local LSM = LibStub("LibSharedMedia-3.0")
 local ACD = LibStub("AceConfigDialog-3.0")
 
 local playerGUID = UnitGUID("player")
+
+-- Hidden tooltip used to parse summoned unit tooltips for things like name
+local parsingTooltip = nil;
 
 local soundOptions = {
     random = "BronCena: Surprise me! (Random)",
@@ -98,7 +101,7 @@ local options = {
     get = "GetConfig",
     set = "SetConfig",
     args = {
-        disable = {
+        disabled = {
             order = 10,
             type = "toggle",
             name = L["Disabled"],
@@ -148,7 +151,7 @@ local options = {
 
 function BronCena:GetConfig(info)
     self:Debug("GetConfig %s", tostring(info[#info]))
-    --self:Printf("GetConfig %s", tostring(info[#info]))
+    --self:Debug("GetConfig %s", tostring(info[#info]))
     return self.db.profile[info[#info]]
 end
 
@@ -231,8 +234,6 @@ function BronCena:SetOwnerValues(info, key, value)
     self.db.profile.owners[key] = value;
 end
 
-
-
 function BronCena:OnInitialize()
 
     self.db = LibStub("AceDB-3.0"):New("BronCenaDB", defaults, true)
@@ -262,35 +263,63 @@ function BronCena:ChatCommand()
 end
 
 function BronCena:OnEnable()
-    self:Print("OnEnable")
+    self:Debug("OnEnable")
     BronCena:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+    --BronCena:RegisterEvent("UNIT_AURA")
+
+    self.parsingTooltip = CreateFrame("GameTooltip", APPNAME.."Tooltip", WorldFrame, "GameTooltipTemplate")
 end
 
 function BronCena:OnDisable()
-    self:Print("OnDisable")
+    self:Debug("OnDisable")
+    BronCena:UnregisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+    --BronCena:RegisterEvent("UNIT_AURA")
+end
+
+function BronCena:UNIT_AURA(...)
+    self:Print(...)
 end
 
 function BronCena:COMBAT_LOG_EVENT_UNFILTERED(...)
-
-    if self.db.profile.disabled == true then
-        return
-    end
 
 	local timestamp, subevent, _, sourceGUID, sourceName, sourceFlags, sourceRaidFlags, destGUID, destName, destFlags, destRaidFlags, spellId, spellName = CombatLogGetCurrentEventInfo()
 
     -- Could also use SPELL_AURA_APPLIED
 	if subevent == "SPELL_SUMMON" then
 
+        -- Spell blocklist (Consecration)
+        if spellId == 26573 then
+            return
+        end
+
+        if self.db.profile.disabled == true then
+            self:Debug("Add-on is disabled")
+            return
+        end
+
+        self:Debug("%s summoned %s using %s", sourceName, destName, spellName)
+
+        self:ScheduleTimer(function (...)
+            self.parsingTooltip:SetOwner(WorldFrame, "ANCHOR_NONE")
+            self.parsingTooltip:SetHyperlink('unit:'..destGUID)
+            local unitName = _G[APPNAME.."Tooltip".."TextLeft1"]
+            -- local unitId = tonumber(string.match(destGUID, "Creature%-.-%-.-%-.-%-.-%-(.-)%-"));
+            self:Debug("Unit name=" .. tostring(unitName))
+        end, 0.5)
+        
+        -- Types: "Creature", "Pet", "GameObject", "Vehicle", "Vignette" 
+        -- [unitType]-0-[serverID]-[instanceID]-[zoneUID]-[ID]-[spawnUID]
+        -- local unitID = tonumber(string.match(unitGUID, "Creature%-.-%-.-%-.-%-.-%-(.-)%-"));
+
         local companion = self.db.profile.companions[spellId]
 
         -- Companion spell id not found
         if not companion then
+            self:Debug("Couldn't find companion for %d", spellId)
             return
         elseif companion.disabled == true then
-            self:Print("Disabled for this companion")
+            self:Debug("Disabled for this companion")
         end
-
-        self:Print("SPELL_SUMMON " .. sourceName)
 
         local instanceName, instanceType, difficultyId, difficultyName, maxPlayers, dynamicDifficulty, isDynamic, instanceId, instanceGroupSize, lfgDungeonId = GetInstanceInfo()
 
@@ -300,16 +329,16 @@ function BronCena:COMBAT_LOG_EVENT_UNFILTERED(...)
         local isMine = bit.band(sourceFlags, COMBATLOG_OBJECT_AFFILIATION_MINE) == COMBATLOG_OBJECT_AFFILIATION_MINE
         local isOutsider = bit.band(sourceFlags, COMBATLOG_OBJECT_AFFILIATION_OUTSIDER) == COMBATLOG_OBJECT_AFFILIATION_OUTSIDER
         
-        self:Printf(string.format("isHostile=%s, isParty=%s, isRaid=%s, isMine=%s, isOutsider=%s", tostring(isHostile), tostring(isParty), tostring(isRaid), tostring(isMine), tostring(isOutsider)))
+        self:Debug(string.format("isHostile=%s, isParty=%s, isRaid=%s, isMine=%s, isOutsider=%s", tostring(isHostile), tostring(isParty), tostring(isRaid), tostring(isMine), tostring(isOutsider)))
 
         -- if not instanceType or instanceType == 'none' then
         --     if companion.zones.world == false then
-        --         self:Print("Disabled for " .. instanceType)
+        --         self:Debug("Disabled for " .. instanceType)
         --         return
         --     end
         -- else
         --     if self.db.profile.zones[instanceType] == false then
-        --         self:Print("Disabled for " .. instanceType)
+        --         self:Debug("Disabled for " .. instanceType)
         --         return
         --         end
         -- end
@@ -318,7 +347,7 @@ function BronCena:COMBAT_LOG_EVENT_UNFILTERED(...)
         if false then --sourceGUID == playerGUID then
 
             if companion.player.disabled == true then
-                self:Print("Skipping, player Bron is disabled")
+                self:Debug("Skipping, player Bron is disabled")
                 return
             end
 
@@ -326,19 +355,19 @@ function BronCena:COMBAT_LOG_EVENT_UNFILTERED(...)
             --print("Your Bron appears!")
         else
             if isMine == true and companion.player.disabled == true then
-                self.Print("Disabled for player")
+                self:Debug("Disabled for player")
                 return
             elseif isHostile == true and companion.enemy.disabled == true then
-                self.Print("Disabled for hostile Brons")
+                self:Debug("Disabled for hostile Brons")
                 return
             elseif isRaid == true and companion.raid.disabled == true then
-                self.Print("Disabled for raid")
+                self:Debug("Disabled for raid")
                 return
             elseif isParty == true and companion.party.disabled == true then
-                self.Print("Disabled for party")
+                self:Debug("Disabled for party")
                 return
             elseif isOutsider == true and companion.friendly.disabled == true then
-                self.Print("Disabled for external friendly Brons")
+                self:Debug("Disabled for external friendly Brons")
                 return
             end
 
