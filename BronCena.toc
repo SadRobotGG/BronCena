@@ -16,5 +16,4 @@
 ## X-Wago-ID: 0mKO7kKx
 embeds.xml
 Locales/en-US.lua
-BronCena.lua
-BronCenaMessageFrame.xml
+BronCena.luaBronCenaMessageFrame.xml
