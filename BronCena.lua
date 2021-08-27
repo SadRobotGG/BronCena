@@ -51,19 +51,31 @@ local function OwnerDefaults()
     }
 end
 
-local function CompanionDefaults(spellId, name, sound)
+local function CompanionDefaults(spellId, name, sound, soundDelay, soundChannel, message, messageDelay)
     return {
         spellId = spellId,
         name = name,
         disabled = false,
         sound = sound or nil,
+        soundDelay = soundDelay or nil,
+        soundChannel = soundChannel or nil,
         channel = nil,
-        message = nil,
+        message = message or nil,
+        messageDelay = messageDelay or nil,
         player = OwnerDefaults(),
         party = OwnerDefaults(),
         raid = OwnerDefaults(),
         friendly = OwnerDefaults(),
         enemy = OwnerDefaults()
+    }
+end
+
+local BuildTemplate = function(message, sound, messageDelay, soundDelay)
+    return {
+        message = message or nil,
+        sound = sound or nil,
+        messageDelay = messageDelay or nil,
+        soundDelay = soundDelay or nil
     }
 end
 
@@ -87,8 +99,12 @@ local defaults = {
         friendly = OwnerDefaults(),
         enemy = OwnerDefaults(),
         companions = {
-            [333961] = CompanionDefaults(333961, "Bron Cena", soundOptions.default),
-            [324739] = CompanionDefaults(324739, "Kyrian Steward", soundOptions.metalgear)
+            [333961] = CompanionDefaults(333961, "Bron Cena", soundOptions.shoryuken, 0.5, nil, "And his name is BRON CENA!"),
+            [324739] = CompanionDefaults(324739, "Kyrian Steward")
+        },
+        templates = {
+            ["default"] = BuildTemplate("A wild %s appears!", soundOptions.metalgear, 0.5),
+            ["bron"] = BuildTemplate("And his name is BRON CENA!", soundOptions.default)
         }
     }
 }
@@ -238,10 +254,10 @@ function BronCena:OnInitialize()
 
     self.db = LibStub("AceDB-3.0"):New("BronCenaDB", defaults, true)
 
-    LSM:Register("sound", "BronCena: Default", "Interface/AddOns/BronCena/Media/Sounds/broncena.ogg")
-    LSM:Register("sound", "BronCena: Shoryuken", "Interface/AddOns/BronCena/Media/Sounds/shoryuken.ogg")
-    LSM:Register("sound", "BronCena: Shouryureppa", "Interface/AddOns/BronCena/Media/Sounds/shouryureppa.ogg")
-    LSM:Register("sound", "BronCena: Metal Gear", "Interface/AddOns/BronCena/Media/Sounds/metalgear.ogg")
+    LSM:Register(LSM.MediaType.SOUND, soundOptions.default, "Interface/AddOns/BronCena/Media/Sounds/broncena.ogg")
+    LSM:Register(LSM.MediaType.SOUND, soundOptions.shoryuken, "Interface/AddOns/BronCena/Media/Sounds/shoryuken.ogg")
+    LSM:Register(LSM.MediaType.SOUND, soundOptions.shouryureppa, "Interface/AddOns/BronCena/Media/Sounds/shouryureppa.ogg")
+    LSM:Register(LSM.MediaType.SOUND, soundOptions.metalgear, "Interface/AddOns/BronCena/Media/Sounds/metalgear.ogg")
 
     --self.profileOptions = LibStub("AceDBOptions-3.0"):GetOptionsTable(self.db);
     --LibStub("AceConfig-3.0"):RegisterOptionsTable(APPNAME, self.profileOptions, {"bron", "broncena"});
@@ -302,7 +318,7 @@ function BronCena:COMBAT_LOG_EVENT_UNFILTERED(...)
         self:ScheduleTimer(function (...)
             self.parsingTooltip:SetOwner(WorldFrame, "ANCHOR_NONE")
             self.parsingTooltip:SetHyperlink('unit:'..destGUID)
-            local unitName = _G[APPNAME.."Tooltip".."TextLeft1"]
+            local unitName = _G[APPNAME.."Tooltip".."TextLeft1"]:GetText()
             -- local unitId = tonumber(string.match(destGUID, "Creature%-.-%-.-%-.-%-.-%-(.-)%-"));
             self:Debug("Unit name=" .. tostring(unitName))
         end, 0.5)
@@ -371,9 +387,48 @@ function BronCena:COMBAT_LOG_EVENT_UNFILTERED(...)
                 return
             end
 
-            BronCenaMessageFrame:AddMessage("A wild Bron appears!", 1.0, 1.0, 1.0, 53, 8);
+            -- Get the message text
+            -- sound = sound or nil,
+            -- soundDelay = soundDelay or nil,
+            -- soundChannel = soundChannel or nil,
+            -- channel = nil,
+            -- message = message or nil,
+            -- messageDelay = messageDelay or nil,
+            local msgFormat = companion.message or self.db.profile.templates.default.message
+            self:Debug("Using format message: %s", tostring(msgFormat))
+            local msg = string.format(msgFormat, "Unknown" )
+            BronCenaMessageFrame:AddMessage(msg, 1.0, 1.0, 1.0, 53, 8);
 
-            PlaySoundFile("Interface/AddOns/BronCena/Media/Sounds/metalgear.ogg", "Dialog")
+            local soundValue = companion.sound or self.db.profile.templates.default.sound;
+
+            soundValue = soundOptions[soundValue] or soundValue
+
+            -- See if the sound can be found in shared media
+            local sound = LSM:Fetch(LSM.MediaType.SOUND, soundValue, false)
+
+            if sound == nil then
+                sound = LSM:Fetch(LSM.MediaType.SOUND, soundOptions.default, false)
+            end
+
+            if sound == nil then
+                self:Debug("Couldn't locate sound file for %s", tostring(sound))
+            else
+                local soundChannel = companion.channel or self.db.profile.templates.default.channel or "Dialog"
+
+                if companion.soundDelay then
+                    self:Debug("Delaying sound by %s", tostring(companion.soundDelay))
+                    self:ScheduleTimer(function (...)
+                        self:Debug("Playing sound %s on %s", sound, soundChannel)
+                        PlaySoundFile(sound, soundChannel)
+                    end, companion.soundDelay)
+                else
+                    self:Debug("Playing sound %s on %s", sound, soundChannel)
+                    PlaySoundFile(sound, soundChannel)
+                end
+
+
+            end
+
             --print("A wild Bron appears!")
         end         
 	end
