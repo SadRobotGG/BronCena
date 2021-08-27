@@ -8,6 +8,8 @@ You don't have to be Kyrian to enjoy this add-on ! When someone near you summons
 
 Thanks to the gang at [Immaterial](https://raider.io/guilds/us/saurfang/Immaterial) for the inspiration!
 
+Hyper, Rach, Jarv
+
 The [John Cena entrance music](https://www.youtube.com/watch?v=zu8bEljrolk) is Copyright WWE Music Group
 
 ## Roadmap
