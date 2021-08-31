@@ -15,6 +15,9 @@ L["Enables or disables when you're not in an instance"] = true
 L["Scenario"] = true
 L["Enables or disables when you're in a scenario"] = true
 
+L["Channel"] = true
+L["Default sound channel"] = true
+
 L["Party"] = true
 L["Dungeon"] = true
 L["Raid"] = true
@@ -23,9 +26,8 @@ L["Arena"] = true
 L["Owners"] = true
 
 L["Player"] = true
-L["Group"] = true
 L["Friendly"] = true
-L["Enemy"] = true
+L["Hostile"] = true
 
 L["Unlock"] = true;
 L["Enables or disables moving UI"] = true
