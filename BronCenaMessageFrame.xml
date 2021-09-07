@@ -1,0 +1,46 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.blizzard.com/wow/ui/
+..\FrameXML\UI.xsd">
+	<!-- <Script file="BronCenaMessageFrame.lua"/> -->
+	
+	<Font name="BronCenaFont" inherits="SystemFont_OutlineThick_Huge4" virtual="true"/>
+
+	<Frame name="BronCenaMessageAnchor" toplevel="true" hidden="false" movable="true" enableMouse="true" parent="UIParent">
+		<Size x="512" y="60" />
+		<Layers>
+			<Layer>
+				<FontString inherits="GameFontNormal" text="Bron Cena Anchor"/>
+				<Texture>
+					<Color r="0" g="0" b="0" a="0.5" />
+				</Texture>
+			</Layer>
+		</Layers>
+		<Anchors>
+			<Anchor point="TOP" x="0" y="-122" />
+		</Anchors>
+		<Scripts>
+		<OnLoad>
+			self:SetClampedToScreen(true)
+			self:RegisterForDrag("LeftButton")
+		</OnLoad>
+		<!-- <OnShow function="CommunitiesGuildNewsFiltersFrame_OnShow"/> -->
+		<OnDragStart>
+			self:StartMoving();
+		</OnDragStart>
+		<OnDragStop>
+			self:StopMovingOrSizing();
+		</OnDragStop>
+		</Scripts>
+	</Frame>
+
+	<MessageFrame name="BronCenaMessageFrame" displayDuration="2" fadeDuration=".5" fadePower="3" insertMode="TOP" parent="UIParent" frameStrata="DIALOG" frameLevel="1" toplevel="true">
+		<Size x="512" y="60" />
+		<Anchors>
+			<Anchor point="TOP" x="0" y="0" relativeTo="BronCenaMessageAnchor" />
+		</Anchors>
+		<!-- <Scripts>
+			<OnLoad method="OnLoad"/>
+			<OnEvent method="OnEvent"/>
+		</Scripts> -->
+		<FontString inherits="BronCenaFont" justifyH="CENTER"/>
+	</MessageFrame>
+</Ui>

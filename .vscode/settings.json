@@ -1,0 +1,14 @@
+{
+    "Lua.diagnostics.globals": [
+        "LibStub",
+        "GetInstanceInfo",
+        "CombatLogGetCurrentEventInfo",
+        "UnitGUID",
+        "bit",
+        "COMBATLOG_OBJECT_REACTION_HOSTILE",
+        "COMBATLOG_OBJECT_AFFILIATION_PARTY",
+        "COMBATLOG_OBJECT_AFFILIATION_RAID",
+        "COMBATLOG_OBJECT_AFFILIATION_MINE",
+        "COMBATLOG_OBJECT_AFFILIATION_OUTSIDER"
+    ]
+}
