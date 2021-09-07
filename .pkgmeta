@@ -26,3 +26,4 @@ ignore:
   - README.md
   - CONTRIBUTING.md
   - LICENSE
+  - docs
