@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.3
+
+* Fixing some issues with the packaging of the addon. With the 3rd party libraries and audio files, this addon is now as swole as Bron himself.
+
+Thanks: Kirasta
+
 ## v1.2
 
 * The announcement text message is back from the original Weak Aura
