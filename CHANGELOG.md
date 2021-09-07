@@ -1,5 +1,21 @@
 # Changelog
 
+## v1.2
+
+* The announcement text message is back from the original Weak Aura
+* Kyrian Steward joined the party!
+* Added more custom sounds, including a 30-second Bron Cena theme
+* Added Bron Cena options (open with `/broncena` or `/bron`) to:
+  * Filter out companions by zone or owner
+  * Choosing custom sounds
+  * Setting the sound channel to play through
+  * Changing the text message
+  * Moving the text message
+
+## v1.1
+
+* Maintenance release to support publishing to all the add-on manager community sites
+
 ## v1.0
 
 * Initial release

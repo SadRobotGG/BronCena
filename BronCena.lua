@@ -12,8 +12,6 @@ local ACD = LibStub("AceConfigDialog-3.0")
 -- Library constants
 local SOUND = LSM.MediaType and LSM.MediaType.SOUND or "sound"
 
-local CHANNEL_DEFAULT = "Dialog"
-
 local playerGUID = UnitGUID("player")
 
 -- Hidden tooltip used to parse summoned unit tooltips for things like name
@@ -30,13 +28,15 @@ local soundOptions = {
 }
 
 local soundChannels =  {
-    ["Default"] = "Default",
-    ["Ambience"] = "Ambience",
-    ["Dialog"] = "Dialog",
-    ["Master"] = "Master",
-    ["Music"] = "Music",
-    ["SFX"] = "Sound"
+    ["default"] = "Default",
+    ["ambience"] = "Ambience",
+    ["dialog"] = "Dialog",
+    ["master"] = "Master",
+    ["music"] = "Music",
+    ["sfx"] = "Sound"
 }
+
+local CHANNEL_DEFAULT = "default"
 
 function BronCena:Verbose(...)
     if self.db.profile.verbose == false then return end
@@ -65,15 +65,21 @@ local function ActionDefaults(...)
     }
 end
 
-local function CompanionDefaults(id, name, desc, action)
+local function CompanionDefaults(id, name, desc, soundId, message, delay)
     return {
         id = id,
         name = name,
         desc = desc,
         disabled = false,
-        actions = {
-            ["action1"] = action
-        }
+        zones = { party = nil, raid = nil, pvp = nil, arena = nil, scenario = nil, world = nil },
+        owners = { player = nil, party = nil, raid = nil, friendly = nil, hostile = nil },
+        delay = delay or nil,
+        soundDisabled = false,
+        soundId = soundId or nil,
+        soundPath = nil,
+        soundChannel = CHANNEL_DEFAULT,
+        message = message or nil,
+        messageDisabled = false
     }
 end
 
@@ -90,7 +96,7 @@ local defaults = {
         disabled = false,
         unlocked = false, -- Enable or disable dragging of the UI elements
         debug = false,
-        channel = CHANNEL_DEFAULT, -- Default sound channel
+        soundChannel = CHANNEL_DEFAULT, -- Default sound channel
 
         -- Enable / disable for zones
         zones = {
@@ -113,8 +119,8 @@ local defaults = {
 
         -- Default companions
         companions = {
-            ["333961"] = CompanionDefaults("333961", "Bron Cena", "", ActionDefaults("Bron's Theme", soundOptions.broncena, "And his name is BRON CENA!")),
-            ["324739"] = CompanionDefaults("324739", "Kyrian Steward", "", ActionDefaults("Wild Steward", soundOptions.metalgear, "A wild %s appears!", 0.5))
+            ["333961"] = CompanionDefaults("333961", "Bron Cena", "", soundOptions.broncena, "And his name is BRON CENA!"),
+            ["324739"] = CompanionDefaults("324739", "Kyrian Steward", "", soundOptions.metalgear, "A wild %s appears!", 0.5)
         }
     }
 }
@@ -156,8 +162,8 @@ local options = {
                             type = "toggle",
                             name = L["Debug"],
                             desc = L["Enables or disables debug logging"]
-                        },                        
-                        channel = {
+                        },
+                        soundChannel = {
                             order = 30,
                             type = "select",
                             name = L["Channel"],
@@ -191,13 +197,13 @@ local options = {
             args = {
                 general = {
                     type = "description",
-                    name = "Choose a companion to edit"
+                    name = "Choose a companion from the drop-down"
                 },
-                add = {
-                    name = "Add",
-                    desc = "Add a new companion",
-                    type = "execute"
-                },
+                -- add = {
+                --     name = "Add",
+                --     desc = "Add a new companion",
+                --     type = "execute"
+                -- },
             }
         }
     }
@@ -226,184 +232,155 @@ function BronCena:InitializeOptions(root)
                     end
                 },
                 id = {
+                    disabled = true,
                     order = 10,
-                    width = "half",
+                    width = "normal",
                     type = "input",
                     name = "ID",
-                    desc = "The spell identifier that summons this companion",
+                    desc = "The spell id that summons this companion",
                     get = function ()
                         return v.id
                     end
                 },
                 name = {
+                    width = "normal",
                     order = 20,
+                    disabled = true,
                     type = "input",
                     name = "Name",
-                    desc = "Edit the name for this companion",
+                    desc = "The name for this companion",
                     get = function ()
                         return v.name
                     end
                 },
-                actions = {
+                message = {
+                    width = "full",
                     order = 25,
-                    type = "group",
-                    --inline = true,
-                    name = "Actions",
-                    desc = "Actions",
-                    args = {
-                        add = {
-                            name = "Add",
-                            desc = "Add an action",
-                            type = "execute"
-                        },
-                    },
-                    childGroups = "tree"
-                }
-            }
-        }
-
-        local order = 30;
-        local nextOrder = function()
-            order = order + 1
-            return order
-        end
-
-        for actionName, actionValue in pairs(v.actions) do
-
-            local action = {
-
-                header = {
-                    order = nextOrder(),
-                    type = 'header',
-                    name = actionName
+                    type = "input",
+                    name = "Message",
+                    desc = "The message for this companion. %s will be substituted with the companion's name.",
+                    get = function (info)
+                        return v.message
+                    end,
+                    set = function(info, value)
+                        v.message = value
+                    end
                 },
-
-                soundChannel = {
-                    order = nextOrder(),
-                    type = "select",
-                    name = L["Channel"],
-                    desc = L["Default sound channel"],
-                    values = "SoundChannels",
-                    get = function (info) return actionValue.soundChannel end,
-                    set = function (info, value) actionValue.soundChannel = value end
-                },
-                
                 soundId = {
-                    order = nextOrder(),
+                    order = 30,
+                    width = "double",
                     type = "select",
                     name = "Sound",
                     desc = "The sound to play",
                     values = "GetSoundOptions",
-                    get = function (info) return actionValue.soundId end,
+                    get = function (info) return v.soundId end,
                     set = function (info, value)
                         self:Debug("Set soundId to %s", tostring(value))
-                        actionValue.soundId = value
+                        v.soundId = value
                     end
                 },
-                
+                soundChannel = {
+                    width = "normal",
+                    order = 40,
+                    type = "select",
+                    name = L["Channel"],
+                    desc = L["Default sound channel"],
+                    values = "SoundChannels",
+                    get = function (info) return v.soundChannel end,
+                    set = function (info, value) v.soundChannel = value end
+                },
                 soundPath = {
-                    order = nextOrder(),
+                    order = 50,
                     type = "input",
                     name = "Path",
                     desc = "The sound to play",
                     width = "full",
                     get = function (info)
-                        if tostring(actionValue.soundId) == tostring(soundOptions.custom) then
-                            return actionValue.soundPath
+                        if tostring(v.soundId) == tostring(soundOptions.custom) then
+                            return v.soundPath
                         else
-                            self:Debug("Fetching %s", actionValue.soundId)
-                            return tostring(LSM:Fetch(LSM.MediaType.SOUND, actionValue.soundId, false) or actionValue.soundId)
+                            self:Debug("Fetching %s", v.soundId)
+                            return tostring(LSM:Fetch(LSM.MediaType.SOUND, v.soundId, false) or v.soundId)
                         end
                     end,
                     set = function (info, value) 
-                        actionValue.soundPath = tostring(value)
+                        v.soundPath = tostring(value)
                     end,
                     disabled = function ()
-                        self:Debug("soundId=%s", actionValue.soundId)
+                        self:Debug("soundId=%s", v.soundId)
 
-                        if tostring(actionValue.soundId) == tostring(soundOptions.custom) then
+                        if tostring(v.soundId) == tostring(soundOptions.custom) then
                             return false
                         else
                             return true
                         end
                     end
                 },
-
                 playSound = {
-                    order = nextOrder(),
+                    order = 60,
                     type = "execute",
                     width = "half",
-                    name = "Play",
+                    name = "Test",
                     func = function()
 
                         -- Default to the custom path
-                        local sound = actionValue.soundPath
+                        local sound = v.soundPath
 
                         -- If we're using a selected option, we have to find the path / soundkit id
-                        if tostring(actionValue.soundId) == tostring(soundOptions.custom) then
+                        if tostring(v.soundId) == tostring(soundOptions.custom) then
                             self:Debug("Using custom sound path")
                         else
-                            self:Debug("Shared media id: %s", tostring(actionValue.soundId))
-                            sound = LSM:Fetch(LSM.MediaType.SOUND, actionValue.soundId, false) or actionValue.soundId
+                            self:Debug("Shared media id: %s", tostring(v.soundId))
+                            sound = LSM:Fetch(LSM.MediaType.SOUND, v.soundId, false) or v.soundId
                         end
 
-                        self:Debug("Playing %s", sound)
-                        local willPlay, handle = PlaySoundFile(sound, actionValue.soundChannel or CHANNEL_DEFAULT)
-                        if willPlay then
-                            actionValue.handle = handle
+                        local soundChannel = v.soundChannel or CHANNEL_DEFAULT
+                        if soundChannel == CHANNEL_DEFAULT then soundChannel = soundChannels.dialog end
+
+                        if not sound then
+                            self:Debug("No sound path to play")
+                        else
+                            local message = string.format(v.message, "<Unknown>")
+                            BronCenaMessageFrame:AddMessage(message, 1.0, 1.0, 1.0, 53, 8);
+                            self:Debug("Playing %s", sound)
+                            local willPlay, handle = PlaySoundFile(sound, soundChannel)
+                            if willPlay then
+                                v.handle = handle
+                            end
                         end
                     end
                 },
-
                 stopSound = {
-                    order = nextOrder(),
+                    order = 70,
                     type = "execute",
                     width = "half",
                     name = "Stop",
                     func = function()
-                        if actionValue.handle then
-                            StopSound(actionValue.handle)
+                        if v.handle then
+                            StopSound(v.handle)
                         end
                     end
                 },
-
                 zones = {
-                    order = nextOrder(),
+                    order = 80,
                     type = "multiselect",
                     name = L["Zones"],
                     values = "GetZoneOptions",
                     tristate = true,
-                    -- set = "SetZoneValues"
+                    get = "GetCompanionMultiSelectConfig",
+                    set = "SetCompanionMultiSelectConfig"
                 },
                 owners = {
-                    order = nextOrder(),
+                    order = 90,
                     type = "multiselect",
                     name = L["Owners"],
                     values = "GetOwnerOptions",
-                    tristate = true
-                    -- get = "GetOwnerValues",
-                    -- set = "SetOwnerValues"
+                    tristate = true,
+                    get = "GetCompanionMultiSelectConfig",
+                    set = "SetCompanionMultiSelectConfig"
                 }
             }
-
-            local groupAction = {
-                name = actionName,
-                type = "group",
-                --inline = true,
-                args = action
-            }
-
-            node.args.actions.args[actionName] = groupAction;
-            -- node.args[actionName.."-header"] = action.header
-            -- node.args[actionName.."-soundChannel"] = action.soundChannel
-            -- node.args[actionName.."-soundId"] = action.soundId
-            -- node.args[actionName.."-soundPath"] = action.soundPath
-            -- node.args[actionName.."-soundPlay"] = action.playSound
-            -- node.args[actionName.."-soundStop"] = action.stopSound
-            -- node.args[actionName.."-zones"] = action.zones
-            -- node.args[actionName.."-owners"] = action.owners
-
-        end
+        }
 
         root.args.companions.args[k] = node
     end
@@ -435,32 +412,36 @@ function BronCena:SetConfig(info, value)
     self:ApplyOptions()
 end
 
-function BronCena:GetCompanionConfig(info, key)
+function BronCena:GetCompanionConfig(info)
     local id = info[#info-1]
     local companion = self.db.profile.companions[id]
-    self:Debug("GetCompanionConfig %s=%s", tostring(info[#info-1]), tostring(key))
     if companion then
-        if key then
-            return companion[info[#info]][key]
-        else
-            return companion[info[#info]]
-        end
+        self:Debug("GetCompanionConfig %s", tostring(info[#info]))
+        return companion[info[#info]]
     end
 end
 
-function BronCena:SetCompanionConfig(info, key, value)
+function BronCena:SetCompanionConfig(info, value)
     local id = info[#info-1]
     local companion = self.db.profile.companions[id]
-    self:Debug("SetCompanionConfig %s=%s", tostring(info[#info]), tostring(value))
-    self:Debug("value2=%s", tostring(value2))
+    self:Debug("SetCompanionConfig companion.%s=%s", tostring(info[#info]), tostring(value))
+    companion[info[#info]] = value
+end
 
-    if value then
-        companion[info[#info]][key] = value
-    else
-        companion[info[#info]] = key
+function BronCena:GetCompanionMultiSelectConfig(info, key)
+    local id = info[#info-1]
+    local companion = self.db.profile.companions[id]
+    if companion then
+        self:Debug("GetCompanionMultiSelectConfig %s.%s", tostring(info[#info]), tostring(key))
+        return companion[info[#info]][key]
     end
+end
 
-    self:ApplyOptions()
+function BronCena:SetCompanionMultiSelectConfig(info, key, value)
+    local id = info[#info-1]
+    local companion = self.db.profile.companions[id]
+    self:Debug("SetCompanionMultiSelectConfig companion.%s.%s=%s", tostring(info[#info]), tostring(key), tostring(value))
+    companion[info[#info]][key] = value
 end
 
 function BronCena:ApplyOptions()
@@ -477,14 +458,7 @@ function BronCena:ApplyOptions()
 end
 
 function BronCena:SoundChannels()
-    return {
-        ["Default"] = "Default",
-        ["Ambience"] = "Ambience",
-        ["Dialog"] = "Dialog",
-        ["Master"] = "Master",
-        ["Music"] = "Music",
-        ["SFX"] = "Sound"
-    }
+    return soundChannels
 end
 
 function BronCena:GetSoundOptions()
@@ -580,7 +554,6 @@ function BronCena:OnInitialize()
     self:RegisterChatCommand("broncena", "ChatCommand")
     self:RegisterChatCommand("bron", "ChatCommand")
     --self.profilesFrame = LibStub("AceConfigDialog-3.0"):AddToBlizOptions("BronCena", "Profiles", APPDESC);
-
 end
 
 function BronCena:ChatCommand()
@@ -590,7 +563,6 @@ function BronCena:ChatCommand()
 end
 
 function BronCena:OnEnable()
-    self:Debug("OnEnable")
     BronCena:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
     --BronCena:RegisterEvent("UNIT_AURA")
 
@@ -605,6 +577,15 @@ end
 
 function BronCena:UNIT_AURA(...)
     self:Print(...)
+end
+
+local getOwner = function(sourceFlags)
+    if bit.band(sourceFlags, COMBATLOG_OBJECT_REACTION_HOSTILE) == COMBATLOG_OBJECT_REACTION_HOSTILE then return "hostile" end
+    if bit.band(sourceFlags, COMBATLOG_OBJECT_AFFILIATION_PARTY) == COMBATLOG_OBJECT_AFFILIATION_PARTY then return "party" end
+    if bit.band(sourceFlags, COMBATLOG_OBJECT_AFFILIATION_RAID) == COMBATLOG_OBJECT_AFFILIATION_RAID then return "raid" end
+    if bit.band(sourceFlags, COMBATLOG_OBJECT_AFFILIATION_MINE) == COMBATLOG_OBJECT_AFFILIATION_MINE then return "player" end
+    if bit.band(sourceFlags, COMBATLOG_OBJECT_AFFILIATION_OUTSIDER) == COMBATLOG_OBJECT_AFFILIATION_OUTSIDER then return "friendly" end
+    return nil
 end
 
 function BronCena:COMBAT_LOG_EVENT_UNFILTERED(...)
@@ -648,85 +629,52 @@ function BronCena:COMBAT_LOG_EVENT_UNFILTERED(...)
             self:Debug("Disabled for this companion")
         end
 
-        local isHostile = bit.band(sourceFlags, COMBATLOG_OBJECT_REACTION_HOSTILE) == COMBATLOG_OBJECT_REACTION_HOSTILE
-        local isParty = bit.band(sourceFlags, COMBATLOG_OBJECT_AFFILIATION_PARTY) == COMBATLOG_OBJECT_AFFILIATION_PARTY
-        local isRaid = bit.band(sourceFlags, COMBATLOG_OBJECT_AFFILIATION_RAID) == COMBATLOG_OBJECT_AFFILIATION_RAID
-        local isMine = bit.band(sourceFlags, COMBATLOG_OBJECT_AFFILIATION_MINE) == COMBATLOG_OBJECT_AFFILIATION_MINE
-        local isOutsider = bit.band(sourceFlags, COMBATLOG_OBJECT_AFFILIATION_OUTSIDER) == COMBATLOG_OBJECT_AFFILIATION_OUTSIDER
-        
-        self:Debug(string.format("isHostile=%s, isParty=%s, isRaid=%s, isMine=%s, isOutsider=%s", tostring(isHostile), tostring(isParty), tostring(isRaid), tostring(isMine), tostring(isOutsider)))
-
-        if isMine == true and self.db.profile.owners.player == false then
-            self:Debug("Disabled for player")
-            return
-        elseif isHostile == true and self.db.profile.owners.enemy == false then
-            self:Debug("Disabled for hostile Brons")
-            return
-        elseif isRaid == true and self.db.profile.owners.raid == false then
-            self:Debug("Disabled for raid")
-            return
-        elseif isParty == true and self.db.profile.owners.party == false then
-            self:Debug("Disabled for party")
-            return
-        elseif isOutsider == true and self.db.profile.owners.friendly == false then
-            self:Debug("Disabled for external friendly Brons")
+        local owner = getOwner(sourceFlags);
+        if owner and companion.owners[owner] == false or (companion.owners[owner] == nil and self.db.profile.owners[owner] == false) then
+            self:Debug("Disabled for %s", owner)
             return
         end
 
         local instanceName, instanceType, difficultyId, difficultyName, maxPlayers, dynamicDifficulty, isDynamic, instanceId, instanceGroupSize, lfgDungeonId = GetInstanceInfo()
-        
+
         if not instanceType or instanceType == 'none' then
             instanceType = 'world';
-            -- if self.db.profile.zones.world == false then
-            --     self:Debug("Disabled for " .. instanceType)
-            --     return
-            -- end
         end
 
-        -- else
-            if self.db.profile.zones[instanceType] == false then
-                self:Debug("Disabled for " .. instanceType)
-                return
-            end
-        -- end
-
-        -- Process each registered action for this companion
-        for k,v in pairs(companion.actions) do
-            
-            local actionName = v.name or k
-            self:Debug("Processing action %s", actionName)
-
-            if v.disabled == true then
-                self:Debug("Action %s is disabled", v.name or k)
-            else
-                if v.zones[instanceType] == false then
-                    self:Debug("Disabled for " .. instanceType)
-                    return
-                end
-
-                -- Figure out the sound to play
-                self:Debug("soundPath=%s,soundId=%s", tostring(v.soundPath), tostring(v.soundId))
-
-                -- Default to the custom path
-                local sound = v.soundPath
-
-                -- If we're using a selected option, we have to find the path / soundkit id
-                if tostring(v.soundId) == tostring(soundOptions.custom) then
-                    self:Debug("Using custom sound path")
-                else
-                    self:Debug("Shared media id: %s", tostring(v.soundId))
-                    sound = LSM:Fetch(LSM.MediaType.SOUND, v.soundId, false) or v.soundId
-                end
-
-                -- Add the message
-                local name = destName
-                local message = string.format(v.message, name or "Unknown")
-                BronCenaMessageFrame:AddMessage(message, 1.0, 1.0, 1.0, 53, 8);
-
-                -- Play the sound
-                self:Debug("Playing %s", tostring(sound))
-                local willPlay, handle = PlaySoundFile(sound, v.channel or CHANNEL_DEFAULT)
-            end
+        if self.db.profile.zones[instanceType] == false then
+            self:Debug("Disabled for " .. instanceType)
+            return
         end
-	end
+
+        if companion.zones[instanceType] == false then
+            self:Debug("Disabled for " .. instanceType)
+            return
+        end
+
+        -- Figure out the sound to play
+        self:Debug("soundPath=%s,soundId=%s", tostring(companion.soundPath), tostring(companion.soundId))
+
+        -- Default to the custom path
+        local sound = companion.soundPath
+
+        -- If we're using a selected option, we have to find the path / soundkit id
+        if tostring(companion.soundId) == tostring(soundOptions.custom) then
+            self:Debug("Using custom sound path")
+        else
+            self:Debug("Shared media id: %s", tostring(companion.soundId))
+            sound = LSM:Fetch(LSM.MediaType.SOUND, companion.soundId, false) or companion.soundId
+        end
+
+        -- Add the message
+        local name = destName
+        local message = string.format(companion.message, name or "Unknown")
+        BronCenaMessageFrame:AddMessage(message, 1.0, 1.0, 1.0, 53, 8);
+
+        local soundChannel = companion.soundChannel or CHANNEL_DEFAULT
+        if soundChannel == CHANNEL_DEFAULT then soundChannel = soundChannels.dialog end
+        
+        -- Play the sound
+        self:Debug("Playing %s", tostring(sound))
+        local willPlay, handle = PlaySoundFile(sound, soundChannel)
+    end
 end
