@@ -4,14 +4,17 @@
 	
 	<Font name="BronCenaFont" inherits="SystemFont_OutlineThick_Huge4" virtual="true"/>
 
-	<Frame name="BronCenaMessageAnchor" toplevel="true" hidden="false" movable="true" enableMouse="true" parent="UIParent">
+	<Frame name="BronCenaMessageAnchor" toplevel="true" hidden="true" movable="true" enableMouse="true" parent="UIParent">
 		<Size x="512" y="60" />
 		<Layers>
 			<Layer>
-				<FontString inherits="GameFontNormal" text="Bron Cena Anchor"/>
-				<Texture>
-					<Color r="0" g="0" b="0" a="0.5" />
-				</Texture>
+				<FontString inherits="GameFontNormal" text="Bron Cena Message Anchor"/>
+				<FontString inherits="GameFontNormalSmall" text="/bron for options">
+					<Anchors>
+						<Anchor point="CENTER" relativeTo="$parent" x="0" y="-20" />
+					</Anchors>
+				</FontString>
+				<Texture><Color r="0" g="0" b="0" a="0.5" /></Texture>
 			</Layer>
 		</Layers>
 		<Anchors>
@@ -22,7 +25,6 @@
 			self:SetClampedToScreen(true)
 			self:RegisterForDrag("LeftButton")
 		</OnLoad>
-		<!-- <OnShow function="CommunitiesGuildNewsFiltersFrame_OnShow"/> -->
 		<OnDragStart>
 			self:StartMoving();
 		</OnDragStart>

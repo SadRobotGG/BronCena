@@ -4,9 +4,8 @@
 ## Author: whup
 ## Version: @project-version@
 ## SavedVariables: BronCenaDB
-## OptionalDeps: Ace3
+## OptionalDeps: Ace3, LibSharedMedia-3.0
 ## X-Embeds: Ace3
-## OptionalDependencies: Ace3, LibSharedMedia-3.0
 ## DefaultState: Enabled
 ## X-Category: Miscellaneous, Audio & Video
 ## X-License: MIT License

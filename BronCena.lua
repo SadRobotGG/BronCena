@@ -12,7 +12,7 @@ local ACD = LibStub("AceConfigDialog-3.0")
 -- Library constants
 local SOUND = LSM.MediaType and LSM.MediaType.SOUND or "sound"
 
-local playerGUID = UnitGUID("player")
+local isInitialized = false
 
 -- Hidden tooltip used to parse summoned unit tooltips for things like name
 local parsingTooltip = nil;
@@ -27,6 +27,14 @@ local soundOptions = {
     metalgear = "BronCena: Metal Gear Alert"
 }
 
+local soundPaths = {
+    [soundOptions.broncena] = "Interface/AddOns/BronCena/Media/Sounds/broncena.ogg",
+    [soundOptions.broncenafull] = "Interface/AddOns/BronCena/Media/Sounds/broncena-full.ogg",
+    [soundOptions.shoryuken] = "Interface/AddOns/BronCena/Media/Sounds/shoryuken.ogg",
+    [soundOptions.shouryureppa] = "Interface/AddOns/BronCena/Media/Sounds/shouryureppa.ogg",
+    [soundOptions.metalgear] = "Interface/AddOns/BronCena/Media/Sounds/metalgear.ogg"
+}
+
 local soundChannels =  {
     ["default"] = "Default",
     ["ambience"] = "Ambience",
@@ -35,6 +43,8 @@ local soundChannels =  {
     ["music"] = "Music",
     ["sfx"] = "Sound"
 }
+
+local sharedSoundOptions = nil
 
 local CHANNEL_DEFAULT = "default"
 
@@ -46,23 +56,6 @@ end
 function BronCena:Debug(...)
     if self.db.profile.debug == false then return end
     self:Printf(...)
-end
-
-local function ActionDefaults(...)
-    local name, soundId, message, delay = ...
-    return {
-        disabled = false,
-        name = name or nil,
-        zones = { party = nil, raid = nil, pvp = nil, arena = nil, scenario = nil, world = nil },
-        owners = { player = nil, party = nil, raid = nil, friendly = nil, hostile = nil },
-        delay = delay or nil,
-        soundDisabled = false,
-        soundId = soundId or nil,
-        soundPath = nil,
-        soundChannel = nil,
-        message = message or nil,
-        messageDisabled = false
-    }
 end
 
 local function CompanionDefaults(id, name, desc, soundId, message, delay)
@@ -212,7 +205,7 @@ local options = {
 function BronCena:InitializeOptions(root)
 
     for k,v in pairs(self.db.profile.companions) do
-        
+
         local node = {
             type = "group",
             name = v.name,
@@ -300,7 +293,7 @@ function BronCena:InitializeOptions(root)
                             return v.soundPath
                         else
                             self:Debug("Fetching %s", v.soundId)
-                            return tostring(LSM:Fetch(LSM.MediaType.SOUND, v.soundId, false) or v.soundId)
+                            return tostring(LSM:Fetch(SOUND, v.soundId, false) or v.soundId)
                         end
                     end,
                     set = function (info, value) 
@@ -331,7 +324,7 @@ function BronCena:InitializeOptions(root)
                             self:Debug("Using custom sound path")
                         else
                             self:Debug("Shared media id: %s", tostring(v.soundId))
-                            sound = LSM:Fetch(LSM.MediaType.SOUND, v.soundId, false) or v.soundId
+                            sound = LSM:Fetch(SOUND, v.soundId, false) or v.soundId
                         end
 
                         local soundChannel = v.soundChannel or CHANNEL_DEFAULT
@@ -462,30 +455,26 @@ function BronCena:SoundChannels()
 end
 
 function BronCena:GetSoundOptions()
+    if self.sharedSoundOptions == nil then
+        self.sharedSoundOptions = {
+            -- Place our BronCena options at the top
+            [soundOptions.custom] = soundOptions.custom,
+            [soundOptions.broncena] = soundOptions.broncena,
+            [soundOptions.broncenafull] = soundOptions.broncenafull,
+            [soundOptions.shoryuken] = soundOptions.shoryuken,
+            [soundOptions.shouryureppa] = soundOptions.shouryureppa,
+            [soundOptions.metalgear] = soundOptions.metalgear,
+        };
 
-    local values = {
-        -- Place our BronCena options at the top
-        [soundOptions.custom] = soundOptions.custom,
-        [soundOptions.broncena] = soundOptions.broncena,
-        [soundOptions.broncenafull] = soundOptions.broncenafull,
-        [soundOptions.shoryuken] = soundOptions.shoryuken,
-        [soundOptions.shouryureppa] = soundOptions.shouryureppa,
-        [soundOptions.metalgear] = soundOptions.metalgear,
-    };
-
-    -- Now we add all the non-BronCena sounds from shared media
-    for k,v in pairs(LSM:HashTable(LSM.MediaType.SOUND)) do
-        if not string.find(k, "BronCena") then
-            values[k] = k
+        -- Now we add all the non-BronCena sounds from shared media
+        for k,v in pairs(LSM:HashTable(SOUND)) do
+            if not string.find(k, "BronCena") then
+                self.sharedSoundOptions[k] = k
+            end
         end
     end
 
-    --return LSM:List(LSM.MediaType.SOUND)
-    return values
-end
-
-function BronCena:GetSoundOption(info, key)
-    --return self.db.profile.sounds.player
+    return self.sharedSoundOptions
 end
 
 function BronCena:GetZoneOptions()
@@ -527,33 +516,30 @@ end
 
 function BronCena:OnInitialize()
 
+    if self.isInitialized == true then
+        return
+    end
+
     self.db = LibStub("AceDB-3.0"):New("BronCenaDB", defaults, true)
 
-    LSM:Register(LSM.MediaType.SOUND, soundOptions.broncena, "Interface/AddOns/BronCena/Media/Sounds/broncena.ogg")
-    LSM:Register(LSM.MediaType.SOUND, soundOptions.broncenafull, "Interface/AddOns/BronCena/Media/Sounds/broncena-full.ogg")
-    LSM:Register(LSM.MediaType.SOUND, soundOptions.shoryuken, "Interface/AddOns/BronCena/Media/Sounds/shoryuken.ogg")
-    LSM:Register(LSM.MediaType.SOUND, soundOptions.shouryureppa, "Interface/AddOns/BronCena/Media/Sounds/shouryureppa.ogg")
-    LSM:Register(LSM.MediaType.SOUND, soundOptions.metalgear, "Interface/AddOns/BronCena/Media/Sounds/metalgear.ogg")
+    LSM:Register(SOUND, soundOptions.broncena, "Interface/AddOns/BronCena/Media/Sounds/broncena.ogg")
+    LSM:Register(SOUND, soundOptions.broncenafull, "Interface/AddOns/BronCena/Media/Sounds/broncena-full.ogg")
+    LSM:Register(SOUND, soundOptions.shoryuken, "Interface/AddOns/BronCena/Media/Sounds/shoryuken.ogg")
+    LSM:Register(SOUND, soundOptions.shouryureppa, "Interface/AddOns/BronCena/Media/Sounds/shouryureppa.ogg")
+    LSM:Register(SOUND, soundOptions.metalgear, "Interface/AddOns/BronCena/Media/Sounds/metalgear.ogg")
 
-    self.media = LSM:HashTable(LSM.MediaType.SOUND)
-
-    --self.profileOptions = LibStub("AceDBOptions-3.0"):GetOptionsTable(self.db);
-    --LibStub("AceConfig-3.0"):RegisterOptionsTable(APPNAME, self.profileOptions, {"bron", "broncena"});
-
-    options = self:InitializeOptions(options)
-
-    LibStub("AceConfig-3.0"):RegisterOptionsTable(APPNAME, options)
-    self.optionsFrame = ACD:AddToBlizOptions(APPNAME, APPDESC)
-
-    --self.profileOptions = LibStub("AceDBOptions-3.0"):GetOptionsTable(self.db);
-    --self.profileOptionsFrame = ACD:AddToBlizOptions("Bron Cena Profiles", "Profiles", self.optionsFrame);
-    --LibStub("AceConfig-3.0"):RegisterOptionsTable(APPNAME, self.profileOptions, {"bron", "broncena"});
+    if self.options == nil then
+        self.options = self:InitializeOptions(options)
+        LibStub("AceConfig-3.0"):RegisterOptionsTable(APPNAME, options)
+        self.optionsFrame = ACD:AddToBlizOptions(APPNAME, APPDESC)
+    end
 
     self:ApplyOptions()
-    
+
     self:RegisterChatCommand("broncena", "ChatCommand")
     self:RegisterChatCommand("bron", "ChatCommand")
-    --self.profilesFrame = LibStub("AceConfigDialog-3.0"):AddToBlizOptions("BronCena", "Profiles", APPDESC);
+
+    self.isInitialized = true
 end
 
 function BronCena:ChatCommand()
@@ -564,19 +550,14 @@ end
 
 function BronCena:OnEnable()
     BronCena:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
-    --BronCena:RegisterEvent("UNIT_AURA")
-
-    self.parsingTooltip = CreateFrame("GameTooltip", APPNAME.."Tooltip", WorldFrame, "GameTooltipTemplate")
+    if self.parsingTooltip == nil then
+        self.parsingTooltip = CreateFrame("GameTooltip", APPNAME.."Tooltip", WorldFrame, "GameTooltipTemplate")
+    end
 end
 
 function BronCena:OnDisable()
     self:Debug("OnDisable")
     BronCena:UnregisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
-    --BronCena:RegisterEvent("UNIT_AURA")
-end
-
-function BronCena:UNIT_AURA(...)
-    self:Print(...)
 end
 
 local getOwner = function(sourceFlags)
@@ -606,14 +587,6 @@ function BronCena:COMBAT_LOG_EVENT_UNFILTERED(...)
         end
 
         self:Debug("%s summoned %s using %s", tostring(sourceName), tostring(destName), tostring(spellName))
-
-        self:ScheduleTimer(function (...)
-            self.parsingTooltip:SetOwner(WorldFrame, "ANCHOR_NONE")
-            self.parsingTooltip:SetHyperlink('unit:'..destGUID)
-            local unitName = _G[APPNAME.."Tooltip".."TextLeft1"]:GetText()
-            -- local unitId = tonumber(string.match(destGUID, "Creature%-.-%-.-%-.-%-.-%-(.-)%-"));
-            self:Debug("Unit name=" .. tostring(unitName))
-        end, 0.5)
         
         -- Types: "Creature", "Pet", "GameObject", "Vehicle", "Vignette" 
         -- [unitType]-0-[serverID]-[instanceID]-[zoneUID]-[ID]-[spawnUID]
@@ -628,6 +601,14 @@ function BronCena:COMBAT_LOG_EVENT_UNFILTERED(...)
         elseif companion.disabled == true then
             self:Debug("Disabled for this companion")
         end
+
+        -- self:ScheduleTimer(function (...)
+        --     self.parsingTooltip:SetOwner(WorldFrame, "ANCHOR_NONE")
+        --     self.parsingTooltip:SetHyperlink('unit:'..destGUID)
+        --     local unitName = _G[APPNAME.."Tooltip".."TextLeft1"]:GetText()
+        --     -- local unitId = tonumber(string.match(destGUID, "Creature%-.-%-.-%-.-%-.-%-(.-)%-"));
+        --     self:Debug("Unit name=" .. tostring(unitName))
+        -- end, 0.5)
 
         local owner = getOwner(sourceFlags);
         if owner and companion.owners[owner] == false or (companion.owners[owner] == nil and self.db.profile.owners[owner] == false) then
@@ -662,7 +643,7 @@ function BronCena:COMBAT_LOG_EVENT_UNFILTERED(...)
             self:Debug("Using custom sound path")
         else
             self:Debug("Shared media id: %s", tostring(companion.soundId))
-            sound = LSM:Fetch(LSM.MediaType.SOUND, companion.soundId, false) or companion.soundId
+            sound = LSM:Fetch(SOUND, companion.soundId, false) or companion.soundId
         end
 
         -- Add the message
