@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.4.2
+
+* Performance improvements.
+
 ## v1.3
 
 * Fixing some issues with the packaging of the addon. With the 3rd party libraries and audio files, this addon is now as swole as Bron himself.
