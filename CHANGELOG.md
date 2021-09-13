@@ -1,12 +1,18 @@
 # Changelog
 
+## 1.4.3
+
+* FIXED: Missing library
+
+Thanks: @DoyleD
+
 ## 1.4.2
 
-* Performance improvements.
+* PERF: Performance improvements.
 
 ## v1.3
 
-* Fixing some issues with the packaging of the addon. With the 3rd party libraries and audio files, this addon is now as swole as Bron himself.
+* FIXED: Some issues with the packaging of the addon. With the 3rd party libraries and audio files, this addon is now as swole as Bron himself.
 
 Thanks: Kirasta
 
