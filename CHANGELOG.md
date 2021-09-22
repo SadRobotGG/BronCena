@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.4.4
+
+* FIXED: Kyrian Steward refused to be silenced by your puny "Disabled" option! Now you should be able to stop them playing the song of their people. Thanks @junghee
+
 ## 1.4.3
 
 * FIXED: Missing library
