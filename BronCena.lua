@@ -600,6 +600,7 @@ function BronCena:COMBAT_LOG_EVENT_UNFILTERED(...)
             return
         elseif companion.disabled == true then
             self:Debug("Disabled for this companion")
+            return
         end
 
         -- self:ScheduleTimer(function (...)
