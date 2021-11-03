@@ -654,9 +654,15 @@ function BronCena:COMBAT_LOG_EVENT_UNFILTERED(...)
 
         local soundChannel = companion.soundChannel or CHANNEL_DEFAULT
         if soundChannel == CHANNEL_DEFAULT then soundChannel = soundChannels.dialog end
-        
+
+        -- Stop this companion's sound if it's already playing to prevent annoying overlaps
+        if companion.handle then StopSound(companion.handle) end
+
         -- Play the sound
         self:Debug("Playing %s", tostring(sound))
         local willPlay, handle = PlaySoundFile(sound, soundChannel)
+        if willPlay then
+            companion.handle = handle
+        end
     end
 end

@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.4.5
+
+* Update to patch 9.1.5
+* FIXED: Sounds shouldn't overlap, so if a bunch of Brons appear rapidly, it will just restart the theme and not playing a bunch all out of sync
+
 ## 1.4.4
 
 * FIXED: Kyrian Steward refused to be silenced by your puny "Disabled" option! Now you should be able to stop them playing the song of their people. Thanks @junghee
