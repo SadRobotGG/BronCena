@@ -2,7 +2,7 @@
 
 ## 1.5.1
 
-* ADDED: When a "bug" returns as a feature: You can now choose "Allow overlapping sounds" again, so you can hear the ~~cacophany~~ sweet symphony of many Bron Cena themes playing out of sync together from the many Kyrian kings & queens in your 40-man raid. You asked for it, @tryallthethings.
+* ADDED #6: When a "bug" returns as a feature: You can now choose "Allow overlapping sounds" in the `/bron` options, so you can hear the ~~cacophany~~ sweet symphony of many Bron Cena themes playing out of sync together from the many Kyrian kings & queens in your 40-man raid. You asked for it, @tryallthethings.
 * CHANGED: Kyrian Steward is disabled by default. I think it low key might be giving people heart attacks who are only expecting Bron Cena sounds.
 
 ## 1.5.0
