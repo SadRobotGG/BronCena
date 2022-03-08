@@ -34,3 +34,6 @@ L["Enables or disables moving UI"] = true
 
 L["Debug"] = true
 L["Enables or disables debug logging"] = true
+
+L["Enable overlapping sounds"] = true
+L["Enables or disables sounds to play over each other when triggered multiple times"] = true

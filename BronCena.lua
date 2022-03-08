@@ -58,12 +58,12 @@ function BronCena:Debug(...)
     self:Printf(...)
 end
 
-local function CompanionDefaults(id, name, desc, soundId, message, delay)
+local function CompanionDefaults(disabled, id, name, desc, soundId, message, delay)
     return {
         id = id,
         name = name,
         desc = desc,
-        disabled = false,
+        disabled = disabled or false,
         zones = { party = nil, raid = nil, pvp = nil, arena = nil, scenario = nil, world = nil },
         owners = { player = nil, party = nil, raid = nil, friendly = nil, hostile = nil },
         delay = delay or nil,
@@ -90,6 +90,7 @@ local defaults = {
         unlocked = false, -- Enable or disable dragging of the UI elements
         debug = false,
         soundChannel = CHANNEL_DEFAULT, -- Default sound channel
+        enableOverlap = false, -- Allow sounds to overlap each other
 
         -- Enable / disable for zones
         zones = {
@@ -112,8 +113,8 @@ local defaults = {
 
         -- Default companions
         companions = {
-            ["333961"] = CompanionDefaults("333961", "Bron Cena", "", soundOptions.broncena, "And his name is BRON CENA!"),
-            ["324739"] = CompanionDefaults("324739", "Kyrian Steward", "", soundOptions.metalgear, "A wild %s appears!", 0.5)
+            ["333961"] = CompanionDefaults(false, "333961", "Bron Cena", "", soundOptions.broncena, "And his name is BRON CENA!"),
+            ["324739"] = CompanionDefaults(true, "324739", "Kyrian Steward", "", soundOptions.metalgear, "A wild %s appears!", 0.5)
         }
     }
 }
@@ -150,18 +151,25 @@ local options = {
                             name = L["Unlock"],
                             desc = L["Enables or disables moving UI"]
                         },
-                        debug = {
-                            order = 30,
-                            type = "toggle",
-                            name = L["Debug"],
-                            desc = L["Enables or disables debug logging"]
-                        },
                         soundChannel = {
                             order = 30,
                             type = "select",
                             name = L["Channel"],
                             desc = L["Default sound channel"],
                             values = "SoundChannels"
+                        },
+                        debug = {
+                            order = 40,
+                            type = "toggle",
+                            name = L["Debug"],
+                            desc = L["Enables or disables debug logging"]
+                        },
+                        enableOverlap = {
+                            order = 50,
+                            type = "toggle",
+                            width = "double",
+                            name = L["Enable overlapping sounds"],
+                            desc = L["Enables or disables sounds to play over each other when triggered multiple times"]
                         },
                     }
                 },
@@ -336,6 +344,15 @@ function BronCena:InitializeOptions(root)
                             local message = string.format(v.message, "<Unknown>")
                             BronCenaMessageFrame:AddMessage(message, 1.0, 1.0, 1.0, 53, 8);
                             self:Debug("Playing %s", sound)
+
+                            -- Stop this companion's sound if it's already playing to prevent annoying overlaps
+                            if v.handle then
+                                -- Users can allow overlapping sounds for hilarity
+                                if not self.db.profile.enableOverlap == true then
+                                    StopSound(v.handle)
+                                end             
+                            end
+
                             local willPlay, handle = PlaySoundFile(sound, soundChannel)
                             if willPlay then
                                 v.handle = handle
@@ -656,7 +673,12 @@ function BronCena:COMBAT_LOG_EVENT_UNFILTERED(...)
         if soundChannel == CHANNEL_DEFAULT then soundChannel = soundChannels.dialog end
 
         -- Stop this companion's sound if it's already playing to prevent annoying overlaps
-        if companion.handle then StopSound(companion.handle) end
+        if companion.handle then
+            -- Users can allow overlapping sounds for hilarity
+            if not self.db.profile.enableOverlap == true then
+                StopSound(companion.handle)
+            end             
+        end
 
         -- Play the sound
         self:Debug("Playing %s", tostring(sound))
