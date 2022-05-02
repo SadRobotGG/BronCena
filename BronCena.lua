@@ -24,7 +24,8 @@ local soundOptions = {
     broncenafull = "BronCena: Full Length",
     shoryuken = "BronCena: Shoryuken",
     shouryureppa = "BronCena: Shouryureppa",
-    metalgear = "BronCena: Metal Gear Alert"
+    metalgear = "BronCena: Metal Gear Alert",
+    yaketysax = "BronCena: Yakety Sax (Benny Hill)"
 }
 
 local soundPaths = {
@@ -32,7 +33,8 @@ local soundPaths = {
     [soundOptions.broncenafull] = "Interface/AddOns/BronCena/Media/Sounds/broncena-full.ogg",
     [soundOptions.shoryuken] = "Interface/AddOns/BronCena/Media/Sounds/shoryuken.ogg",
     [soundOptions.shouryureppa] = "Interface/AddOns/BronCena/Media/Sounds/shouryureppa.ogg",
-    [soundOptions.metalgear] = "Interface/AddOns/BronCena/Media/Sounds/metalgear.ogg"
+    [soundOptions.metalgear] = "Interface/AddOns/BronCena/Media/Sounds/metalgear.ogg",
+    [soundOptions.yaketysax] = "Interface/AddOns/BronCena/Media/Sounds/yaketysax.ogg"
 }
 
 local soundChannels =  {
@@ -58,7 +60,7 @@ function BronCena:Debug(...)
     self:Printf(...)
 end
 
-local function CompanionDefaults(disabled, id, name, desc, soundId, message, delay)
+local function CompanionDefaults(disabled, id, name, desc, soundId, message, delay, eventType)
     return {
         id = id,
         name = name,
@@ -72,7 +74,8 @@ local function CompanionDefaults(disabled, id, name, desc, soundId, message, del
         soundPath = nil,
         soundChannel = CHANNEL_DEFAULT,
         message = message or nil,
-        messageDisabled = false
+        messageDisabled = false,
+        eventType = eventType or "SPELL_SUMMON"
     }
 end
 
@@ -114,7 +117,8 @@ local defaults = {
         -- Default companions
         companions = {
             ["333961"] = CompanionDefaults(false, "333961", "Bron Cena", "", soundOptions.broncena, "And his name is BRON CENA!"),
-            ["324739"] = CompanionDefaults(true, "324739", "Kyrian Steward", "", soundOptions.metalgear, "A wild %s appears!", 0.5)
+            ["324739"] = CompanionDefaults(true, "324739", "Kyrian Steward", "", soundOptions.metalgear, "A wild %s appears!", 0.8),
+            ["368241"] = CompanionDefaults(true, "368241", "Wo Speed Buff", "", soundOptions.yaketysax, nil, nil, "SPELL_AURA_APPLIED"),
         }
     }
 }
@@ -341,8 +345,11 @@ function BronCena:InitializeOptions(root)
                         if not sound then
                             self:Debug("No sound path to play")
                         else
-                            local message = string.format(v.message, "<Unknown>")
-                            BronCenaMessageFrame:AddMessage(message, 1.0, 1.0, 1.0, 53, 8);
+                            if v.message then
+                                local message = string.format(v.message, "<Unknown>")
+                                BronCenaMessageFrame:AddMessage(message, 1.0, 1.0, 1.0, 53, 8);
+                            end
+
                             self:Debug("Playing %s", sound)
 
                             -- Stop this companion's sound if it's already playing to prevent annoying overlaps
@@ -481,6 +488,7 @@ function BronCena:GetSoundOptions()
             [soundOptions.shoryuken] = soundOptions.shoryuken,
             [soundOptions.shouryureppa] = soundOptions.shouryureppa,
             [soundOptions.metalgear] = soundOptions.metalgear,
+            [soundOptions.yaketysax] = soundOptions.yaketysax
         };
 
         -- Now we add all the non-BronCena sounds from shared media
@@ -544,6 +552,7 @@ function BronCena:OnInitialize()
     LSM:Register(SOUND, soundOptions.shoryuken, "Interface/AddOns/BronCena/Media/Sounds/shoryuken.ogg")
     LSM:Register(SOUND, soundOptions.shouryureppa, "Interface/AddOns/BronCena/Media/Sounds/shouryureppa.ogg")
     LSM:Register(SOUND, soundOptions.metalgear, "Interface/AddOns/BronCena/Media/Sounds/metalgear.ogg")
+    LSM:Register(SOUND, soundOptions.yaketysax, "Interface/AddOns/BronCena/Media/Sounds/yakety-sax.ogg")
 
     if self.options == nil then
         self.options = self:InitializeOptions(options)
@@ -591,7 +600,7 @@ function BronCena:COMBAT_LOG_EVENT_UNFILTERED(...)
 	local timestamp, subevent, _, sourceGUID, sourceName, sourceFlags, sourceRaidFlags, destGUID, destName, destFlags, destRaidFlags, spellId, spellName = CombatLogGetCurrentEventInfo()
 
     -- Could also use SPELL_AURA_APPLIED
-	if subevent == "SPELL_SUMMON" then
+	if subevent == "SPELL_SUMMON" or subevent == "SPELL_AURA_APPLIED" then
 
         -- Spell blocklist (Consecration)
         if spellId == 26573 then
@@ -619,14 +628,6 @@ function BronCena:COMBAT_LOG_EVENT_UNFILTERED(...)
             self:Debug("Disabled for this companion")
             return
         end
-
-        -- self:ScheduleTimer(function (...)
-        --     self.parsingTooltip:SetOwner(WorldFrame, "ANCHOR_NONE")
-        --     self.parsingTooltip:SetHyperlink('unit:'..destGUID)
-        --     local unitName = _G[APPNAME.."Tooltip".."TextLeft1"]:GetText()
-        --     -- local unitId = tonumber(string.match(destGUID, "Creature%-.-%-.-%-.-%-.-%-(.-)%-"));
-        --     self:Debug("Unit name=" .. tostring(unitName))
-        -- end, 0.5)
 
         local owner = getOwner(sourceFlags);
         if owner and companion.owners[owner] == false or (companion.owners[owner] == nil and self.db.profile.owners[owner] == false) then
@@ -664,27 +665,66 @@ function BronCena:COMBAT_LOG_EVENT_UNFILTERED(...)
             sound = LSM:Fetch(SOUND, companion.soundId, false) or companion.soundId
         end
 
-        -- Add the message
-        local name = destName
-        local message = string.format(companion.message, name or "Unknown")
-        BronCenaMessageFrame:AddMessage(message, 1.0, 1.0, 1.0, 53, 8);
-
         local soundChannel = companion.soundChannel or CHANNEL_DEFAULT
         if soundChannel == CHANNEL_DEFAULT then soundChannel = soundChannels.dialog end
 
-        -- Stop this companion's sound if it's already playing to prevent annoying overlaps
-        if companion.handle then
-            -- Users can allow overlapping sounds for hilarity
-            if not self.db.profile.enableOverlap == true then
-                StopSound(companion.handle)
-            end             
-        end
+        -- Is there a delay on this companion? We can do this to line up the message or sounds to
+        -- the companion's timings, or use it to give the game engine time to get the unit's descriptive name
+        -- e.g. "Farah" instead of "Kyrian Steward"
+        if companion.delay == nil or companion.delay <= 0 then
+            
+            -- Add the message
+            if companion.message then
+                local name = destName
+                local message = string.format(companion.message, name or "Unknown")
+                BronCenaMessageFrame:AddMessage(message, 1.0, 1.0, 1.0, 53, 8);            
+            end
 
-        -- Play the sound
-        self:Debug("Playing %s", tostring(sound))
-        local willPlay, handle = PlaySoundFile(sound, soundChannel)
-        if willPlay then
-            companion.handle = handle
+            -- Stop this companion's sound if it's already playing to prevent annoying overlaps
+            if companion.handle then
+                -- Users can allow overlapping sounds for hilarity
+                if not self.db.profile.enableOverlap == true then
+                    StopSound(companion.handle)
+                end             
+            end
+
+            -- Play the sound
+            self:Debug("Playing %s", tostring(sound))
+            local willPlay, handle = PlaySoundFile(sound, soundChannel)
+            if willPlay then
+                companion.handle = handle
+            end
+
+        else
+            -- Delay the message to be able to get the unit's name 
+            self:ScheduleTimer(function (...)
+
+                if companion.message then
+                    self.parsingTooltip:SetOwner(WorldFrame, "ANCHOR_NONE")
+                    self.parsingTooltip:SetHyperlink('unit:'..destGUID)
+                    local unitName = _G[APPNAME.."Tooltip".."TextLeft1"]:GetText()
+
+                    -- local unitId = tonumber(string.match(destGUID, "Creature%-.-%-.-%-.-%-.-%-(.-)%-"));
+                    local message = string.format(companion.message, unitName or destName or "Unknown")
+                    BronCenaMessageFrame:AddMessage(message, 1.0, 1.0, 1.0, 53, 8);
+                end
+
+                -- Stop this companion's sound if it's already playing to prevent annoying overlaps
+                if companion.handle then
+                    -- Users can allow overlapping sounds for hilarity
+                    if not self.db.profile.enableOverlap == true then
+                        StopSound(companion.handle)
+                    end             
+                end
+
+                -- Play the sound
+                self:Debug("Playing %s", tostring(sound))
+                local willPlay, handle = PlaySoundFile(sound, soundChannel)
+                if willPlay then
+                    companion.handle = handle
+                end
+
+            end, companion.delay)
         end
     end
 end
