@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.6.0
+
+Let's Get David Sued by Music Publishers Edition (tm)
+
+These new "companions" are disabled by default so be sure to type in `/bron` to enable them
+
+* ADDED #7: Play Benny Hill Theme (Yakety Sax) when you get Wo buff. This way when you really wanted Urh buff, you can't stay mad. Requested by @Totahat
+* ADDED #9: "Hello Darkness, my old friend" from Sound of Silence when Havoc Demon Hunter plants Darkness. Requested by Craiguz
+* Some initial support for hunter pets
+
 ## 1.5.1
 
 * ADDED #6: When a "bug" returns as a feature: You can now choose "Allow overlapping sounds" in the `/bron` options, so you can hear the ~~cacophany~~ sweet symphony of many Bron Cena themes playing out of sync together from the many Kyrian kings & queens in your 40-man raid. You asked for it, @tryallthethings.
