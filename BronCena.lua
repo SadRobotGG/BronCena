@@ -25,7 +25,8 @@ local soundOptions = {
     shoryuken = "BronCena: Shoryuken",
     shouryureppa = "BronCena: Shouryureppa",
     metalgear = "BronCena: Metal Gear Alert",
-    yaketysax = "BronCena: Yakety Sax (Benny Hill)"
+    yaketysax = "BronCena: Yakety Sax (Benny Hill)",
+    darkness = "BronCena: Sound of Silence",
 }
 
 local soundPaths = {
@@ -34,7 +35,8 @@ local soundPaths = {
     [soundOptions.shoryuken] = "Interface/AddOns/BronCena/Media/Sounds/shoryuken.ogg",
     [soundOptions.shouryureppa] = "Interface/AddOns/BronCena/Media/Sounds/shouryureppa.ogg",
     [soundOptions.metalgear] = "Interface/AddOns/BronCena/Media/Sounds/metalgear.ogg",
-    [soundOptions.yaketysax] = "Interface/AddOns/BronCena/Media/Sounds/yaketysax.ogg"
+    [soundOptions.yaketysax] = "Interface/AddOns/BronCena/Media/Sounds/yaketysax.ogg",
+    [soundOptions.darkness] = "Interface/AddOns/BronCena/Media/Sounds/darkness.ogg"
 }
 
 local soundChannels =  {
@@ -68,6 +70,26 @@ local function CompanionDefaults(disabled, id, name, desc, soundId, message, del
         disabled = disabled or false,
         zones = { party = nil, raid = nil, pvp = nil, arena = nil, scenario = nil, world = nil },
         owners = { player = nil, party = nil, raid = nil, friendly = nil, hostile = nil },
+        delay = delay or nil,
+        soundDisabled = false,
+        soundId = soundId or nil,
+        soundPath = nil,
+        soundChannel = CHANNEL_DEFAULT,
+        message = message or nil,
+        messageDisabled = false,
+        eventType = eventType or "SPELL_SUMMON"
+    }
+end
+
+-- Spells that by default should only trigger for just the player
+local function CompanionPlayerDefaults(disabled, id, name, desc, soundId, message, delay, eventType)
+    return {
+        id = id,
+        name = name,
+        desc = desc,
+        disabled = disabled or false,
+        zones = { party = nil, raid = nil, pvp = nil, arena = nil, scenario = nil, world = nil },
+        owners = { player = true, party = false, raid = false, friendly = false, hostile = false },
         delay = delay or nil,
         soundDisabled = false,
         soundId = soundId or nil,
@@ -118,7 +140,10 @@ local defaults = {
         companions = {
             ["333961"] = CompanionDefaults(false, "333961", "Bron Cena", "", soundOptions.broncena, "And his name is BRON CENA!"),
             ["324739"] = CompanionDefaults(true, "324739", "Kyrian Steward", "", soundOptions.metalgear, "A wild %s appears!", 0.8),
-            ["368241"] = CompanionDefaults(true, "368241", "Wo Speed Buff", "", soundOptions.yaketysax, nil, nil, "SPELL_AURA_APPLIED"),
+            ["368241"] = CompanionPlayerDefaults(true, "368241", "Wo Speed Buff", "", soundOptions.yaketysax, nil, nil, "SPELL_AURA_APPLIED"),
+            ["883"] = CompanionDefaults(true, "883", "Hunter Pet 1", "", soundOptions.metalgear, "A wild %s appears!", 0.8),
+            ["1297"] = CompanionDefaults(true, "1297", "Revive Pet", "", soundOptions.metalgear, "A wild %s appears!", 0.8),
+            ["196718"] = CompanionDefaults(true, "196718", "Darkness", "", soundOptions.darkness, "Hello Darkness my old friend...", nil, "SPELL_CAST_SUCCESS"),
         }
     }
 }
@@ -488,7 +513,8 @@ function BronCena:GetSoundOptions()
             [soundOptions.shoryuken] = soundOptions.shoryuken,
             [soundOptions.shouryureppa] = soundOptions.shouryureppa,
             [soundOptions.metalgear] = soundOptions.metalgear,
-            [soundOptions.yaketysax] = soundOptions.yaketysax
+            [soundOptions.yaketysax] = soundOptions.yaketysax,
+            [soundOptions.darkness] = soundOptions.darkness,
         };
 
         -- Now we add all the non-BronCena sounds from shared media
@@ -553,6 +579,7 @@ function BronCena:OnInitialize()
     LSM:Register(SOUND, soundOptions.shouryureppa, "Interface/AddOns/BronCena/Media/Sounds/shouryureppa.ogg")
     LSM:Register(SOUND, soundOptions.metalgear, "Interface/AddOns/BronCena/Media/Sounds/metalgear.ogg")
     LSM:Register(SOUND, soundOptions.yaketysax, "Interface/AddOns/BronCena/Media/Sounds/yakety-sax.ogg")
+    LSM:Register(SOUND, soundOptions.darkness, "Interface/AddOns/BronCena/Media/Sounds/darkness.ogg")
 
     if self.options == nil then
         self.options = self:InitializeOptions(options)
@@ -599,85 +626,116 @@ function BronCena:COMBAT_LOG_EVENT_UNFILTERED(...)
 
 	local timestamp, subevent, _, sourceGUID, sourceName, sourceFlags, sourceRaidFlags, destGUID, destName, destFlags, destRaidFlags, spellId, spellName = CombatLogGetCurrentEventInfo()
 
-    -- Could also use SPELL_AURA_APPLIED
-	if subevent == "SPELL_SUMMON" or subevent == "SPELL_AURA_APPLIED" then
+    if self.db.profile.disabled == true then
+        --self:Debug("Add-on is disabled")
+        return
+    end
 
-        -- Spell blocklist (Consecration)
-        if spellId == 26573 then
-            return
-        end
+    -- Debug: We can log out summoned units to help figure out spell ids to support new summons.
+    if subevent == "SPELL_SUMMON" then
+        --self:Printf("%s summoned %s using %s (%d)", tostring(sourceName), tostring(destName), tostring(spellName), tostring(spellId))
+    end
 
-        if self.db.profile.disabled == true then
-            self:Debug("Add-on is disabled")
-            return
-        end
+    -- See if this spellId is supported
+    local companion = self.db.profile.companions[tostring(spellId)]
 
-        self:Debug("%s summoned %s using %s", tostring(sourceName), tostring(destName), tostring(spellName))
+    if not companion then
+        return
+    elseif companion.disabled == true then
+        self:Debug("Disabled for this companion")
+        return
+    end
+
+    if companion.eventType ~= subevent then
+        -- The type of event doesn't match what we want, so skip this
+        return
+    end
+    
+    -- Spell blocklist (Consecration)
+    if spellId == 26573 then
+        return
+    end
+
+    -- Types: "Creature", "Pet", "GameObject", "Vehicle", "Vignette" 
+    -- [unitType]-0-[serverID]-[instanceID]-[zoneUID]-[ID]-[spawnUID]
+    -- local unitID = tonumber(string.match(unitGUID, "Creature%-.-%-.-%-.-%-.-%-(.-)%-"));
+
+    local owner = getOwner(sourceFlags);
+    if owner and companion.owners[owner] == false or (companion.owners[owner] == nil and self.db.profile.owners[owner] == false) then
+        self:Debug("Disabled for %s", owner)
+        return
+    end
+
+    local instanceName, instanceType, difficultyId, difficultyName, maxPlayers, dynamicDifficulty, isDynamic, instanceId, instanceGroupSize, lfgDungeonId = GetInstanceInfo()
+
+    if not instanceType or instanceType == 'none' then
+        instanceType = 'world';
+    end
+
+    if self.db.profile.zones[instanceType] == false then
+        self:Debug("Disabled for " .. instanceType)
+        return
+    end
+
+    if companion.zones[instanceType] == false then
+        self:Debug("Disabled for " .. instanceType)
+        return
+    end
+
+    -- Figure out the sound to play
+    self:Debug("soundPath=%s,soundId=%s", tostring(companion.soundPath), tostring(companion.soundId))
+
+    -- Default to the custom path
+    local sound = companion.soundPath
+
+    -- If we're using a selected option, we have to find the path / soundkit id
+    if tostring(companion.soundId) == tostring(soundOptions.custom) then
+        self:Debug("Using custom sound path")
+    else
+        self:Debug("Shared media id: %s", tostring(companion.soundId))
+        sound = LSM:Fetch(SOUND, companion.soundId, false) or companion.soundId
+    end
+
+    local soundChannel = companion.soundChannel or CHANNEL_DEFAULT
+    if soundChannel == CHANNEL_DEFAULT then soundChannel = soundChannels.dialog end
+
+    -- Is there a delay on this companion? We can do this to line up the message or sounds to
+    -- the companion's timings, or use it to give the game engine time to get the unit's descriptive name
+    -- e.g. "Farah" instead of "Kyrian Steward"
+    if companion.delay == nil or companion.delay <= 0 then
         
-        -- Types: "Creature", "Pet", "GameObject", "Vehicle", "Vignette" 
-        -- [unitType]-0-[serverID]-[instanceID]-[zoneUID]-[ID]-[spawnUID]
-        -- local unitID = tonumber(string.match(unitGUID, "Creature%-.-%-.-%-.-%-.-%-(.-)%-"));
-
-        local companion = self.db.profile.companions[tostring(spellId)]
-
-        -- Companion spell id not found
-        if not companion then
-            self:Debug("Couldn't find companion for %d", spellId)
-            return
-        elseif companion.disabled == true then
-            self:Debug("Disabled for this companion")
-            return
+        -- Add the message
+        if companion.message then
+            local name = destName
+            local message = string.format(companion.message, name or "Unknown")
+            BronCenaMessageFrame:AddMessage(message, 1.0, 1.0, 1.0, 53, 8);            
         end
 
-        local owner = getOwner(sourceFlags);
-        if owner and companion.owners[owner] == false or (companion.owners[owner] == nil and self.db.profile.owners[owner] == false) then
-            self:Debug("Disabled for %s", owner)
-            return
+        -- Stop this companion's sound if it's already playing to prevent annoying overlaps
+        if companion.handle then
+            -- Users can allow overlapping sounds for hilarity
+            if not self.db.profile.enableOverlap == true then
+                StopSound(companion.handle)
+            end             
         end
 
-        local instanceName, instanceType, difficultyId, difficultyName, maxPlayers, dynamicDifficulty, isDynamic, instanceId, instanceGroupSize, lfgDungeonId = GetInstanceInfo()
-
-        if not instanceType or instanceType == 'none' then
-            instanceType = 'world';
+        -- Play the sound
+        self:Debug("Playing %s", tostring(sound))
+        local willPlay, handle = PlaySoundFile(sound, soundChannel)
+        if willPlay then
+            companion.handle = handle
         end
 
-        if self.db.profile.zones[instanceType] == false then
-            self:Debug("Disabled for " .. instanceType)
-            return
-        end
+    else
+        -- Delay the message to be able to get the unit's name 
+        self:ScheduleTimer(function (...)
 
-        if companion.zones[instanceType] == false then
-            self:Debug("Disabled for " .. instanceType)
-            return
-        end
-
-        -- Figure out the sound to play
-        self:Debug("soundPath=%s,soundId=%s", tostring(companion.soundPath), tostring(companion.soundId))
-
-        -- Default to the custom path
-        local sound = companion.soundPath
-
-        -- If we're using a selected option, we have to find the path / soundkit id
-        if tostring(companion.soundId) == tostring(soundOptions.custom) then
-            self:Debug("Using custom sound path")
-        else
-            self:Debug("Shared media id: %s", tostring(companion.soundId))
-            sound = LSM:Fetch(SOUND, companion.soundId, false) or companion.soundId
-        end
-
-        local soundChannel = companion.soundChannel or CHANNEL_DEFAULT
-        if soundChannel == CHANNEL_DEFAULT then soundChannel = soundChannels.dialog end
-
-        -- Is there a delay on this companion? We can do this to line up the message or sounds to
-        -- the companion's timings, or use it to give the game engine time to get the unit's descriptive name
-        -- e.g. "Farah" instead of "Kyrian Steward"
-        if companion.delay == nil or companion.delay <= 0 then
-            
-            -- Add the message
             if companion.message then
-                local name = destName
-                local message = string.format(companion.message, name or "Unknown")
-                BronCenaMessageFrame:AddMessage(message, 1.0, 1.0, 1.0, 53, 8);            
+                self.parsingTooltip:SetOwner(WorldFrame, "ANCHOR_NONE")
+                self.parsingTooltip:SetHyperlink('unit:'..destGUID)
+                local unitName = _G[APPNAME.."Tooltip".."TextLeft1"]:GetText()
+                local message = string.format(companion.message, unitName or destName or "Unknown")
+                BronCenaMessageFrame:AddMessage(message, 1.0, 1.0, 1.0, 53, 8);
             end
 
             -- Stop this companion's sound if it's already playing to prevent annoying overlaps
@@ -695,36 +753,6 @@ function BronCena:COMBAT_LOG_EVENT_UNFILTERED(...)
                 companion.handle = handle
             end
 
-        else
-            -- Delay the message to be able to get the unit's name 
-            self:ScheduleTimer(function (...)
-
-                if companion.message then
-                    self.parsingTooltip:SetOwner(WorldFrame, "ANCHOR_NONE")
-                    self.parsingTooltip:SetHyperlink('unit:'..destGUID)
-                    local unitName = _G[APPNAME.."Tooltip".."TextLeft1"]:GetText()
-
-                    -- local unitId = tonumber(string.match(destGUID, "Creature%-.-%-.-%-.-%-.-%-(.-)%-"));
-                    local message = string.format(companion.message, unitName or destName or "Unknown")
-                    BronCenaMessageFrame:AddMessage(message, 1.0, 1.0, 1.0, 53, 8);
-                end
-
-                -- Stop this companion's sound if it's already playing to prevent annoying overlaps
-                if companion.handle then
-                    -- Users can allow overlapping sounds for hilarity
-                    if not self.db.profile.enableOverlap == true then
-                        StopSound(companion.handle)
-                    end             
-                end
-
-                -- Play the sound
-                self:Debug("Playing %s", tostring(sound))
-                local willPlay, handle = PlaySoundFile(sound, soundChannel)
-                if willPlay then
-                    companion.handle = handle
-                end
-
-            end, companion.delay)
-        end
+        end, companion.delay)
     end
 end
