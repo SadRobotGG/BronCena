@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.6.1
+
+* Booping version to support 9.2.5
+
 ## 1.6.0
 
 Let's Get David Sued by Music Publishers Edition (tm)
