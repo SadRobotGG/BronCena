@@ -35,7 +35,7 @@ local soundPaths = {
     [soundOptions.shoryuken] = "Interface/AddOns/BronCena/Media/Sounds/shoryuken.ogg",
     [soundOptions.shouryureppa] = "Interface/AddOns/BronCena/Media/Sounds/shouryureppa.ogg",
     [soundOptions.metalgear] = "Interface/AddOns/BronCena/Media/Sounds/metalgear.ogg",
-    [soundOptions.yaketysax] = "Interface/AddOns/BronCena/Media/Sounds/yaketysax.ogg",
+    [soundOptions.yaketysax] = "Interface/AddOns/BronCena/Media/Sounds/yakety-sax.ogg",
     [soundOptions.darkness] = "Interface/AddOns/BronCena/Media/Sounds/darkness.ogg"
 }
 
