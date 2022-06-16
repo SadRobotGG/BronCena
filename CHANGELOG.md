@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.6.2
+
+* FIXED #10: Oops, Wo buff Benny Hill was bugged! Thanks @tryallthethings
+
 ## 1.6.1
 
 * Booping version to support 9.2.5
