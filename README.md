@@ -6,6 +6,8 @@ You don't have to be Kyrian to enjoy this add-on ! When someone near you summons
 
 Bron's friend the Kyrian Steward has joined the party! More companions to be supported soon.
 
+**Even though Bron is going away in Dragonflight, Bron Cena will live on in his memory as an add-on for adding fun audio cues**
+
 ### Commands & Configuration
 
 `/bron` to open up the options.
