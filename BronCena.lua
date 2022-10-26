@@ -372,7 +372,7 @@ function BronCena:InitializeOptions(root)
                         else
                             if v.message then
                                 local message = string.format(v.message, "<Unknown>")
-                                BronCenaMessageFrame:AddMessage(message, 1.0, 1.0, 1.0, 53, 8);
+                                BronCenaMessageFrame:AddMessage(message, 1.0, 1.0, 1.0);
                             end
 
                             self:Debug("Playing %s", sound)
@@ -708,7 +708,7 @@ function BronCena:COMBAT_LOG_EVENT_UNFILTERED(...)
         if companion.message then
             local name = destName
             local message = string.format(companion.message, name or "Unknown")
-            BronCenaMessageFrame:AddMessage(message, 1.0, 1.0, 1.0, 53, 8);            
+            BronCenaMessageFrame:AddMessage(message, 1.0, 1.0, 1.0);            
         end
 
         -- Stop this companion's sound if it's already playing to prevent annoying overlaps
@@ -735,7 +735,7 @@ function BronCena:COMBAT_LOG_EVENT_UNFILTERED(...)
                 self.parsingTooltip:SetHyperlink('unit:'..destGUID)
                 local unitName = _G[APPNAME.."Tooltip".."TextLeft1"]:GetText()
                 local message = string.format(companion.message, unitName or destName or "Unknown")
-                BronCenaMessageFrame:AddMessage(message, 1.0, 1.0, 1.0, 53, 8);
+                BronCenaMessageFrame:AddMessage(message, 1.0, 1.0, 1.0);
             end
 
             -- Stop this companion's sound if it's already playing to prevent annoying overlaps
