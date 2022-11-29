@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.6.7
+
+* Bron Cena congratulates you when you level up. Thanks for the suggestion Rach.
+
 ## 1.6.6
 
 * Dragonflight launch

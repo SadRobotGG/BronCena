@@ -138,6 +138,7 @@ local defaults = {
 
         -- Default companions
         companions = {
+            ["1"] = CompanionDefaults(false, "1", "Level Up", "", soundOptions.broncena, "DING! Bron Cena says grats on level %s!", nil, "PLAYER_LEVEL_UP"),
             ["333961"] = CompanionDefaults(false, "333961", "Bron Cena", "", soundOptions.broncena, "And his name is BRON CENA!"),
             ["324739"] = CompanionDefaults(true, "324739", "Kyrian Steward", "", soundOptions.metalgear, "A wild %s appears!", 0.8),
             ["368241"] = CompanionPlayerDefaults(true, "368241", "Wo Speed Buff", "", soundOptions.yaketysax, nil, nil, "SPELL_AURA_APPLIED"),
@@ -603,6 +604,7 @@ end
 
 function BronCena:OnEnable()
     BronCena:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+    BronCena:RegisterEvent("PLAYER_LEVEL_UP")
     if self.parsingTooltip == nil then
         self.parsingTooltip = CreateFrame("GameTooltip", APPNAME.."Tooltip", WorldFrame, "GameTooltipTemplate")
     end
@@ -610,10 +612,12 @@ end
 
 function BronCena:OnDisable()
     self:Debug("OnDisable")
+    BronCena:UnregisterEvent("PLAYER_LEVEL_UP")
     BronCena:UnregisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
 end
 
 local getOwner = function(sourceFlags)
+    if sourceFlags == nill then return nill end
     if bit.band(sourceFlags, COMBATLOG_OBJECT_REACTION_HOSTILE) == COMBATLOG_OBJECT_REACTION_HOSTILE then return "hostile" end
     if bit.band(sourceFlags, COMBATLOG_OBJECT_AFFILIATION_PARTY) == COMBATLOG_OBJECT_AFFILIATION_PARTY then return "party" end
     if bit.band(sourceFlags, COMBATLOG_OBJECT_AFFILIATION_RAID) == COMBATLOG_OBJECT_AFFILIATION_RAID then return "raid" end
@@ -622,18 +626,20 @@ local getOwner = function(sourceFlags)
     return nil
 end
 
-function BronCena:COMBAT_LOG_EVENT_UNFILTERED(...)
+function BronCena:PLAYER_LEVEL_UP(subevent, newLevel)
+    self:TriggerBron(1, subevent, tostring(newLevel), nil)
+end
 
+function BronCena:COMBAT_LOG_EVENT_UNFILTERED(...)
 	local timestamp, subevent, _, sourceGUID, sourceName, sourceFlags, sourceRaidFlags, destGUID, destName, destFlags, destRaidFlags, spellId, spellName = CombatLogGetCurrentEventInfo()
+    self:TriggerBron(spellId, subevent, destName, sourceFlags)
+end
+
+function BronCena:TriggerBron(spellId, subevent, destName, sourceFlags)
 
     if self.db.profile.disabled == true then
         --self:Debug("Add-on is disabled")
         return
-    end
-
-    -- Debug: We can log out summoned units to help figure out spell ids to support new summons.
-    if subevent == "SPELL_SUMMON" then
-        --self:Printf("%s summoned %s using %s (%d)", tostring(sourceName), tostring(destName), tostring(spellName), tostring(spellId))
     end
 
     -- See if this spellId is supported
