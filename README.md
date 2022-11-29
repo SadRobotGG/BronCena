@@ -1,12 +1,8 @@
 ## Bron Cena
 
-When a wild Bron appears, the John Cena theme tune will play.
+With the launch of Dragonflight, Bron is taking a break.
 
-You don't have to be Kyrian to enjoy this add-on ! When someone near you summons Bron, the theme will play.
-
-Bron's friend the Kyrian Steward has joined the party! More companions to be supported soon.
-
-**Even though Bron is going away in Dragonflight, Bron Cena will live on in his memory as an add-on for adding fun audio cues**
+However, I'll be updating this mod to make it an easy way to add fun sound cues and sound packs to the game.
 
 ### Commands & Configuration
 

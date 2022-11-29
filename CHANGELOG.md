@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.6.6
+
+* Dragonflight launch
+
 ## 1.6.5
 
 * Fixing bugs for 10.0
