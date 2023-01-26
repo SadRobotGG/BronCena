@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.6.8
+
+* Boop for patch 10.0.5
 ## 1.6.7
 
 * Bron Cena congratulates you when you level up. Thanks for the suggestion Rach.
