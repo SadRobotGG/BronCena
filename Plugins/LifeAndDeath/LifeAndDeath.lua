@@ -14,7 +14,7 @@ local defaults = {
 }
 
 local sounds = {
-    heroesNeverDie = {name= "BronCena: OW: Heroes Never Die", path= BronCena.SOUND_PATH.."OW/heroes-never-die.ogg"},
+    heroesNeverDie = {name= "BronCena: OW: Heroes Never Die", path= BronCena.SOUND_PATH.."Overwatch/heroes-never-die.ogg"},
 }
 
 function LifeAndDeath:OnInitialize()
