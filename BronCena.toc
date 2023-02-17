@@ -16,4 +16,7 @@
 embeds.xml
 Locales/en-US.lua
 BronCena.lua
-BronCenaMessageFrame.xml
+BronCenaMessageFrame.
+Plugins\Tooltip\Tooltip.lua
+Plugins\KillSounds\KillSounds.lua
+Plugins\LifeAndDeath\LifeAndDeath.lua
